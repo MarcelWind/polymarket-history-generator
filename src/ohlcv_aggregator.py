@@ -20,8 +20,9 @@ class OHLCVCandle:
 
 
 class OHLCVAggregator:
-    def __init__(self, candle_interval_seconds: int = 60):
+    def __init__(self, candle_interval_seconds: int = 60, tracked_assets: dict | None = None):
         self.interval = candle_interval_seconds
+        self.tracked_assets = tracked_assets
         self.lock = threading.Lock()
         self._current_candles: dict[str, dict] = {}
         self._completed_candles: list[OHLCVCandle] = []
@@ -117,6 +118,9 @@ class OHLCVAggregator:
         trade_size: float = 0.0,
         is_trade: bool = False,
     ):
+        if self.tracked_assets is not None and asset_id not in self.tracked_assets:
+            return
+
         candle_start = self._candle_start_time(timestamp_ms)
 
         if asset_id in self._current_candles:
