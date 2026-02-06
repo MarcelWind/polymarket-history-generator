@@ -1,0 +1,34 @@
+# Search queries for market discovery.
+# Each entry is a text query passed to the Gamma API public-search endpoint.
+market_queries:
+    - "highest-temperature-in-toronto"
+    - "highest-temperature-in-nyc"
+    - "highest-temperature-in-atlanta"
+    - "highest-temperature-in-dallas"
+    - "highest-temperature-in-miami"
+    - "highest-temperature-in-chicago"
+    - "highest-temperature-in-toronto"
+    - "highest-temperature-in-seattle"
+    - "highest-temperature-in-buenos-aires"
+    - "highest-temperature-in-london"
+    - "highest-temperature-in-ankara"
+    - "highest-temperature-in-seoul"
+    - "highest-temperature-in-wellington"
+
+# OHLCV candle interval in seconds (default: 60 = 1-minute candles)
+candle_interval_seconds: 60
+
+# How often to poll Gamma API for new markets, in seconds (default: 300 = 5 min)
+discovery_interval_seconds: 300
+
+# How often to flush in-memory candles to disk, in seconds (default: 120 = 2 min)
+flush_interval_seconds: 120
+
+# Directory for parquet storage (relative to project root)
+data_dir: "data"
+
+# Logging level: DEBUG, INFO, WARNING, ERROR
+log_level: "INFO"
+
+# Whether to print raw WebSocket messages
+verbose: false
