@@ -76,6 +76,7 @@ def main():
 
         if now - last_flush >= config.flush_interval_seconds:
             storage.flush_to_disk()
+            storage.archive()
             last_flush = now
 
         if now - last_discovery >= config.discovery_interval_seconds:
@@ -95,6 +96,7 @@ def main():
     if completed:
         storage.append_candles(completed)
     storage.flush_to_disk()
+    storage.archive()
     logger.info("Shutdown complete")
 
 

@@ -1,4 +1,6 @@
 import logging
+import shutil
+import tempfile
 import pandas as pd
 from pathlib import Path
 from datetime import datetime, timezone
@@ -83,6 +85,30 @@ class ParquetStorage:
         if file_path.exists():
             return pd.read_parquet(file_path)
         return None
+
+    def archive(self, archive_path: str = "data.zip"):
+        """Zip the data directory, writing to a temp file then replacing atomically."""
+        archive_dest = Path(archive_path)
+        try:
+            with tempfile.NamedTemporaryFile(
+                dir=archive_dest.parent, suffix=".zip", delete=False
+            ) as tmp:
+                tmp_path = Path(tmp.name)
+
+            # shutil.make_archive wants the base name without extension
+            shutil.make_archive(
+                str(tmp_path.with_suffix("")), "zip", root_dir=".", base_dir=str(self.data_dir)
+            )
+            # make_archive appends .zip to the base name
+            created = tmp_path.with_suffix("").with_suffix(".zip")
+            created.replace(archive_dest)
+            tmp_path.unlink(missing_ok=True)
+
+            size_mb = archive_dest.stat().st_size / (1024 * 1024)
+            logger.info(f"Archive updated: {archive_dest} ({size_mb:.1f} MB)")
+        except Exception:
+            logger.exception("Error creating archive")
+            tmp_path.unlink(missing_ok=True)
 
     def get_buffer_size(self) -> int:
         return len(self._buffer)

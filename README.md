@@ -10,6 +10,7 @@ Records OHLCV (Open/High/Low/Close/Volume) candle data from Polymarket weather m
    - Price: mid-price derived from best bid/ask
    - Volume: from matched trades (`last_trade_price` messages)
 4. **Periodic Flush** - Buffers candles in memory and writes to parquet files on a configurable interval
+5. **Archive** - After each flush, rebuilds `data.zip` atomically (write to temp file, then replace) so it can be safely copied off the server at any time
 
 New markets (e.g. tomorrow's temperature forecast) are automatically discovered and subscribed to while running.
 
@@ -79,6 +80,12 @@ Read with pandas:
 ```python
 import pandas as pd
 df = pd.read_parquet("data/highest-temperature-in-toronto-on-february-6-2026/-5-c.parquet")
+```
+
+A `data.zip` archive is kept up to date after every flush and on shutdown. Copy it off the server at any time — writes are atomic so you'll never get a partial file:
+
+```bash
+scp server:path/to/polymarket-history-generator/data.zip .
 ```
 
 ## Architecture

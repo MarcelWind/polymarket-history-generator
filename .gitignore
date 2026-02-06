@@ -224,3 +224,4 @@ polymarket_data/
 # Market Data
 data/
 *.parquet
+data.zip
