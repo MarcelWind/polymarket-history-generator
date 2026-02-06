@@ -98,11 +98,66 @@ Three threads:
 - **WebSocket** (daemon) - receives market data, feeds aggregator
 - **Ping** (daemon) - keeps WebSocket alive
 
+## Examples
+
+### List events and inspect a market (`example_lookup.py`)
+
+```bash
+python example_lookup.py
+```
+
+```
+Available events (31):
+  highest-temperature-in-toronto-on-february-6-2026 (7 markets)
+  highest-temperature-in-london-on-february-7-2026 (6 markets)
+  ...
+
+--- Loading: highest-temperature-in-chicago-on-february-7-2026 ---
+Shape: (58, 11)
+Markets: ['-15-c', '-14-c', '-13-c', '-12-c', '-11-c', '-10-c-or-higher', '-16-c-or-below']
+Time range: 2026-02-06T19:34:00+00:00 -> 2026-02-06T20:31:00+00:00
+
+Latest candle per market:
+                              datetime   close  volume  trade_count
+market
+-10-c-or-higher  2026-02-06T20:31:00+00:00  0.550     0.0            0
+-15-c            2026-02-06T20:31:00+00:00  0.045     0.0            0
+...
+```
+
+You can also import the helpers directly:
+
+```python
+from example_lookup import load_event, list_events
+
+df = load_event("highest-temperature-in-toronto-on-february-7-2026")
+```
+
+### Aggregate volume summary (`example_summary.py`)
+
+```bash
+python example_summary.py
+```
+
+```
+Total candles: 2522
+Total trades: 142
+Total volume: 10472.5399
+
+Candles with volume > 0:
+  london-on-february-6-2026/12-c: 2 candles, volume=1885.7800
+  wellington-on-february-7-2026/18-c: 1 candles, volume=5000.0000
+  toronto-on-february-6-2026/1-c: 1 candles, volume=437.0000
+  ...
+```
+
 ## Project Structure
 
 ```
 ├── config.yaml               # User configuration
 ├── run.py                    # Entry point / orchestrator
+├── example_lookup.py         # Load and inspect saved data
+├── example_summary.py        # Aggregate volume summary
 ├── src/
 │   ├── config.py             # Config loading
 │   ├── market_discovery.py   # Gamma API market discovery
