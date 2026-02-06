@@ -2,5 +2,8 @@
 pandas
 numpy
 requests
-#
+python-dotenv
+websocket-client
+py-clob-client 
+# Data Storage
 parquet
