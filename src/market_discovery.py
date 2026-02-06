@@ -39,6 +39,9 @@ class MarketDiscovery:
             try:
                 events = self._search_events(query)
                 for event in events:
+                    event_slug = event.get("slug", "")
+                    if not event_slug.startswith(query):
+                        continue
                     new_from_event = self._extract_yes_tokens(event)
                     new_markets.extend(new_from_event)
             except Exception:
