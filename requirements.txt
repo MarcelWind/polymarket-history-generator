@@ -1,0 +1,6 @@
+# Core
+pandas
+numpy
+requests
+#
+parquet
