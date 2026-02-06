@@ -12,7 +12,7 @@ class ParquetStorage:
     def __init__(self, data_dir: str = "data", market_lookup: dict[str, MarketInfo] | None = None):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self.market_lookup = market_lookup or {}
+        self.market_lookup = market_lookup if market_lookup is not None else {}
         self._buffer: list[dict] = []
 
     def _get_file_path(self, asset_id: str) -> Path:
