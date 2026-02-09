@@ -4,6 +4,8 @@ import tempfile
 import pandas as pd
 from pathlib import Path
 from datetime import datetime, timezone
+import os
+from pathlib import Path
 
 from src.market_discovery import MarketInfo
 
@@ -106,6 +108,10 @@ class ParquetStorage:
 
             size_mb = archive_dest.stat().st_size / (1024 * 1024)
             logger.info(f"Archive updated: {archive_dest} ({size_mb:.1f} MB)")
+
+            # chmod: rw-r--- (640)
+            Path("data.zip").chmod(0o640)
+            logger.info(f"Archive permissions set to 640")
         except Exception:
             logger.exception("Error creating archive")
             tmp_path.unlink(missing_ok=True)
