@@ -14,6 +14,12 @@ market_queries:
     - "highest-temperature-in-ankara"
     - "highest-temperature-in-seoul"
     - "highest-temperature-in-wellington"
+    - "of-elon-musk-tweets"
+    - "of-views-of-mrbeast-video-day"
+    - "bitcoin-above-on"
+    - "spx-up-or-down-on"
+    - "nvda-up-or-down-on"
+    - "tsla-close-above-on"
 
 # OHLCV candle interval in seconds (default: 60 = 1-minute candles)
 candle_interval_seconds: 60
