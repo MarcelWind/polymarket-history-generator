@@ -1,6 +1,7 @@
 # Search queries for market discovery.
 # Each entry is a text query passed to the Gamma API public-search endpoint.
 market_queries:
+    - "elon-musk-tweets"
     - "highest-temperature-in-toronto"
     - "highest-temperature-in-nyc"
     - "highest-temperature-in-atlanta"
@@ -14,11 +15,10 @@ market_queries:
     - "highest-temperature-in-ankara"
     - "highest-temperature-in-seoul"
     - "highest-temperature-in-wellington"
-    - "of-elon-musk-tweets"
     - "of-views-of-mrbeast-video-day"
     - "bitcoin-above-on"
     - "spx-up-or-down-on"
-    - "nvda-up-or-down-on"
+    - "nvda-close-above-on"
     - "tsla-close-above-on"
 
 # OHLCV candle interval in seconds (default: 60 = 1-minute candles)
