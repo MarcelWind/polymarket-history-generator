@@ -44,6 +44,8 @@ class ParquetStorage:
                     "volume": c.volume,
                     "trade_count": c.trade_count,
                     "vwap": c.vwap,
+                    "buy_volume": c.buy_volume,
+                    "sell_volume": c.sell_volume,
                 }
             )
         return len(candles)

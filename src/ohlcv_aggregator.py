@@ -17,6 +17,8 @@ class OHLCVCandle:
     volume: float
     trade_count: int
     vwap: float
+    buy_volume: float
+    sell_volume: float
 
 
 class OHLCVAggregator:
@@ -47,13 +49,14 @@ class OHLCVAggregator:
         timestamp_ms = int(msg.get("timestamp", time.time() * 1000))
         price = float(msg.get("price", 0))
         size = float(msg.get("size", 0))
+        side = msg.get("side", "")
 
         if price <= 0:
             return
 
         with self.lock:
             self._update_candle(
-                asset_id, timestamp_ms, price=price, trade_size=size, is_trade=True
+                asset_id, timestamp_ms, price=price, trade_size=size, is_trade=True, side=side
             )
 
     def _handle_bbo(self, msg: dict):
@@ -117,6 +120,7 @@ class OHLCVAggregator:
         price: float,
         trade_size: float = 0.0,
         is_trade: bool = False,
+        side: str = "",
     ):
         if self.tracked_assets is not None and asset_id not in self.tracked_assets:
             return
@@ -144,6 +148,10 @@ class OHLCVAggregator:
             c["volume"] += trade_size
             c["trade_count"] += 1
             c["vwap_numerator"] += price * trade_size
+            if side.upper() == "BUY":
+                c["buy_volume"] += trade_size
+            elif side.upper() == "SELL":
+                c["sell_volume"] += trade_size
 
     def _new_candle_state(self, asset_id: str, start_time: int, price: float) -> dict:
         return {
@@ -154,6 +162,8 @@ class OHLCVAggregator:
             "low": price,
             "close": price,
             "volume": 0.0,
+            "buy_volume": 0.0,
+            "sell_volume": 0.0,
             "trade_count": 0,
             "vwap_numerator": 0.0,
         }
@@ -175,6 +185,8 @@ class OHLCVAggregator:
             volume=state["volume"],
             trade_count=state["trade_count"],
             vwap=vwap,
+            buy_volume=state["buy_volume"],
+            sell_volume=state["sell_volume"],
         )
         self._completed_candles.append(candle)
         logger.debug(
