@@ -93,6 +93,7 @@ class ParquetStorage:
     def archive(self, archive_path: str = "data.zip"):
         """Zip the data directory, writing to a temp file then replacing atomically."""
         archive_dest = Path(archive_path)
+        
         try:
             with tempfile.NamedTemporaryFile(
                 dir=archive_dest.parent, suffix=".zip", delete=False
@@ -105,6 +106,23 @@ class ParquetStorage:
             )
             # make_archive appends .zip to the base name
             created = tmp_path.with_suffix("").with_suffix(".zip")
+            
+            # Create backups before overwriting, but only if new archive is not smaller in size
+            if archive_dest.exists():
+                new_size = created.stat().st_size
+                old_size = archive_dest.stat().st_size
+                if new_size >= old_size:
+                    backup1 = archive_dest.parent / "data_backup_1.zip"
+                    backup2 = archive_dest.parent / "data_backup_2.zip"
+                    if backup1.exists():
+                        if not backup2.exists() or backup1.stat().st_size > backup2.stat().st_size:
+                            backup1.replace(backup2)  # Move backup1 to backup2 only if larger
+                        else:
+                            logger.info("Skipping backup1 to backup2 move: backup1 not larger than backup2")
+                    archive_dest.replace(backup1)  # Move current to backup1
+                else:
+                    logger.warning(f"New archive ({new_size} bytes) is smaller than existing ({old_size} bytes), skipping backup creation")
+            
             created.replace(archive_dest)
             tmp_path.unlink(missing_ok=True)
 
@@ -116,7 +134,8 @@ class ParquetStorage:
             logger.info(f"Archive permissions set to 640")
         except Exception:
             logger.exception("Error creating archive")
-            tmp_path.unlink(missing_ok=True)
+            if 'tmp_path' in locals():
+                tmp_path.unlink(missing_ok=True)
 
     def get_buffer_size(self) -> int:
         return len(self._buffer)
