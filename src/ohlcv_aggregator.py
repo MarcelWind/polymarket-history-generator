@@ -66,6 +66,7 @@ class OHLCVAggregator:
 
         best_bid = float(msg.get("best_bid", 0))
         best_ask = float(msg.get("best_ask", 0))
+        spread = float(msg.get("spread", 0))
         timestamp_ms = int(msg.get("timestamp", time.time() * 1000))
 
         if best_bid > 0 and best_ask > 0:
