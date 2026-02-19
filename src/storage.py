@@ -46,6 +46,7 @@ class ParquetStorage:
                     "vwap": c.vwap,
                     "buy_volume": c.buy_volume,
                     "sell_volume": c.sell_volume,
+                    "outcome": getattr(c, "outcome", ""),
                 }
             )
         return len(candles)
@@ -56,10 +57,11 @@ class ParquetStorage:
             return
 
         df = pd.DataFrame(self._buffer)
-        grouped = df.groupby("asset_id")
+        # group by asset_id and outcome so we keep separate rows per outcome
+        grouped = df.groupby(["asset_id", "outcome"])
 
         try:
-            for raw_key, group_df in grouped:
+            for (raw_key, outcome), group_df in grouped:
                 aid = str(raw_key)
                 file_path = self._get_file_path(aid)
 
@@ -67,15 +69,15 @@ class ParquetStorage:
                     existing = pd.read_parquet(file_path)
                     combined = pd.concat([existing, group_df], ignore_index=True)
                     combined = combined.drop_duplicates(
-                        subset=["asset_id", "timestamp"], keep="last"
+                        subset=["asset_id", "outcome", "timestamp"], keep="last"
                     )
-                    combined = combined.sort_values("timestamp").reset_index(drop=True)
+                    combined = combined.sort_values(["timestamp", "outcome"]).reset_index(drop=True)
                     combined.to_parquet(file_path, index=False, engine="pyarrow")
                 else:
                     group_df.to_parquet(file_path, index=False, engine="pyarrow")
 
                 info = self.market_lookup.get(aid)
-                label = f"{info.event_slug}/{info.market_slug}" if info else aid[:16]
+                label = f"{info.event_slug}/{info.market_slug}/{outcome}" if info else f"{aid[:16]}/{outcome}"
                 logger.info(f"Flushed {len(group_df)} candles -> {label}")
 
             flushed_count = len(self._buffer)

@@ -23,7 +23,11 @@ def main():
     logger = logging.getLogger("main")
 
     discovery = MarketDiscovery()
-    aggregator = OHLCVAggregator(config.candle_interval_seconds, tracked_assets=discovery.known_assets)
+    aggregator = OHLCVAggregator(
+        config.candle_interval_seconds,
+        tracked_assets=discovery.known_assets,
+        market_lookup=discovery.known_assets,
+    )
     storage = ParquetStorage(config.data_dir, market_lookup=discovery.known_assets)
 
     logger.info("Running initial market discovery...")

@@ -19,12 +19,14 @@ class OHLCVCandle:
     vwap: float
     buy_volume: float
     sell_volume: float
+    outcome: str
 
 
 class OHLCVAggregator:
-    def __init__(self, candle_interval_seconds: int = 60, tracked_assets: dict | None = None):
+    def __init__(self, candle_interval_seconds: int = 60, tracked_assets: dict | None = None, market_lookup: dict | None = None):
         self.interval = candle_interval_seconds
         self.tracked_assets = tracked_assets
+        self.market_lookup = market_lookup
         self.lock = threading.Lock()
         self._current_candles: dict[str, dict] = {}
         self._completed_candles: list[OHLCVCandle] = []
@@ -128,16 +130,26 @@ class OHLCVAggregator:
 
         candle_start = self._candle_start_time(timestamp_ms)
 
+        # determine outcome label from market_lookup if available
+        outcome_label = ""
+        try:
+            if self.market_lookup is not None and asset_id in self.market_lookup:
+                m = self.market_lookup.get(asset_id)
+                outcome_label = getattr(m, "outcome_label", "") or ""
+        except Exception:
+            outcome_label = ""
+
         if asset_id in self._current_candles:
             current = self._current_candles[asset_id]
-            if current["start_time"] != candle_start:
+            # finalize if timeslot changed or outcome changed
+            if current["start_time"] != candle_start or current.get("outcome", "") != outcome_label:
                 self._finalize_candle(current)
                 self._current_candles[asset_id] = self._new_candle_state(
-                    asset_id, candle_start, price
+                    asset_id, candle_start, price, outcome_label
                 )
         else:
             self._current_candles[asset_id] = self._new_candle_state(
-                asset_id, candle_start, price
+                asset_id, candle_start, price, outcome_label
             )
 
         c = self._current_candles[asset_id]
@@ -154,7 +166,7 @@ class OHLCVAggregator:
             elif side.upper() == "SELL":
                 c["sell_volume"] += trade_size
 
-    def _new_candle_state(self, asset_id: str, start_time: int, price: float) -> dict:
+    def _new_candle_state(self, asset_id: str, start_time: int, price: float, outcome: str = "") -> dict:
         return {
             "asset_id": asset_id,
             "start_time": start_time,
@@ -167,6 +179,7 @@ class OHLCVAggregator:
             "sell_volume": 0.0,
             "trade_count": 0,
             "vwap_numerator": 0.0,
+            "outcome": outcome,
         }
 
     def _finalize_candle(self, state: dict):
@@ -188,6 +201,7 @@ class OHLCVAggregator:
             vwap=vwap,
             buy_volume=state["buy_volume"],
             sell_volume=state["sell_volume"],
+            outcome=state.get("outcome", ""),
         )
         self._completed_candles.append(candle)
         logger.debug(

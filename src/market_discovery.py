@@ -26,6 +26,7 @@ class MarketInfo:
     market_title: str
     event_title: str
     condition_id: str
+    outcome_label: str = ""
     market_slug: str = field(init=False)
 
     def __post_init__(self):
@@ -150,17 +151,13 @@ class MarketDiscovery:
                 token_ids = self._load_json_if_str(raw_token_ids, "clobTokenIds") or []
                 outcomes = self._load_json_if_str(raw_outcomes, "outcomes") or []
 
-                # If token_ids empty, decide whether to fetch details
+                # If token_ids empty, fetch market details to try to obtain them
                 if not token_ids:
-                    norms = [self._normalize_outcome(o) for o in (outcomes or [])]
-
-                    if any(n in ("yes", "1", "true", "y", "up") for n in norms):
-                        try:
-                            if not token_ids:
-                                fetched = self._fetch_market_details(event_id or event_slug, market_title)
-                                token_ids = self._load_json_if_str(fetched, "fetched_clobTokenIds") or []
-                        except Exception:
-                            pass
+                    try:
+                        fetched = self._fetch_market_details(event_id or event_slug, market_title)
+                        token_ids = self._load_json_if_str(fetched, "fetched_clobTokenIds") or []
+                    except Exception:
+                        pass
 
                 # Ensure lists
                 if not isinstance(token_ids, list):
@@ -173,17 +170,19 @@ class MarketDiscovery:
                         token_id_str = str(token_id).strip()
                         outcome = outcomes[i] if i < len(outcomes) else ""
                         outcome_norm = self._normalize_outcome(outcome)
-                        if outcome_norm in ("yes", "1", "true", "y", "up") and token_id_str and token_id_str not in self.known_assets:
+
+                        if token_id_str and token_id_str not in self.known_assets:
                             info = MarketInfo(
                                 asset_id=token_id_str,
                                 event_slug=event_slug,
                                 market_title=market_title,
                                 event_title=event_title,
                                 condition_id=condition_id,
+                                outcome_label=outcome_norm,
                             )
                             self.known_assets[token_id_str] = info
                             new_markets.append(info)
-                            logger.info("Discovered: %s / %s", event_title, market_title)
+                            logger.info("Discovered: %s / %s [%s]", event_title, market_title, outcome_norm)
                     except Exception:
                         logger.exception("Error processing token/outcome for market %s", market.get("id"))
                         continue
