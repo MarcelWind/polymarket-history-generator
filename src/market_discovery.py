@@ -54,7 +54,6 @@ class MarketDiscovery:
                 logger.exception(f"Error searching for query: {query}")
                 continue
 
-            slug_query = _slugify(query)
             for event in events:
                 try:
                     # skip events that have no open markets
@@ -68,6 +67,53 @@ class MarketDiscovery:
                     logger.exception(f"Error processing event {event.get('slug')} for query: {query}")
         return new_markets
 
+    def _tokens_in_order(self, needle_tokens: list[str], haystack_tokens: list[str]) -> bool:
+        """Return True when all needle tokens appear in order in the haystack."""
+        if not needle_tokens:
+            return False
+        i = 0
+        for token in haystack_tokens:
+            if token == needle_tokens[i]:
+                i += 1
+                if i == len(needle_tokens):
+                    return True
+        return False
+
+    def _event_matches_query(self, event: dict, query: str) -> bool:
+        """
+        The public-search endpoint is fuzzy and can return loosely related events.
+        Keep only events that are clearly relevant to the configured query.
+        """
+        query_slug = _slugify(query.replace("_", "-"))
+        query_tokens = [t for t in query_slug.split("-") if t]
+        if not query_tokens:
+            return False
+
+        candidates: list[str] = []
+        candidates.append(event.get("slug") or "")
+        candidates.append(event.get("title") or "")
+
+        for m in event.get("markets", []) or []:
+            candidates.append(m.get("slug") or "")
+            candidates.append(m.get("groupItemTitle") or "")
+            candidates.append(m.get("question") or "")
+
+        for candidate in candidates:
+            candidate_slug = _slugify(candidate)
+            if not candidate_slug or candidate_slug == "unknown":
+                continue
+
+            # Fast path for exact/substring-style slug matches.
+            if query_slug == candidate_slug or query_slug in candidate_slug:
+                return True
+
+            # Accept close matches where the endpoint inserts words (e.g. elon-musk-tweets -> elon-musk-of-tweets).
+            candidate_tokens = [t for t in candidate_slug.split("-") if t]
+            if self._tokens_in_order(query_tokens, candidate_tokens):
+                return True
+
+        return False
+
     def _search_events(self, query: str) -> list[dict]:
         params = {
             "q": query,
@@ -79,9 +125,6 @@ class MarketDiscovery:
             "keep_closed_markets": 0,
         }
 
-        slug_query = _slugify(query)
-        slug_like = (query == slug_query) and ("-" in query or "_" in query)
-
         open_events = []
         for page in range(1, 4):                    # page 1..3
             p = dict(params, page=page)
@@ -90,7 +133,7 @@ class MarketDiscovery:
             events = resp.json().get("events", []) or []
             for e in events:
                 mkts = e.get("markets", []) or []
-                if any(not (m.get("closed") or m.get("archived")) for m in mkts):
+                if any(not (m.get("closed") or m.get("archived")) for m in mkts) and self._event_matches_query(e, query):
                     open_events.append(e)
             if open_events:
                 break                              # stop early if we found open events

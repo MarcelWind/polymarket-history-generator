@@ -34,9 +34,7 @@ class ParquetStorage:
                 {
                     "asset_id": c.asset_id,
                     "timestamp": c.timestamp,
-                    "datetime": datetime.fromtimestamp(
-                        c.timestamp, tz=timezone.utc
-                    ).isoformat(),
+                    "datetime": datetime.fromtimestamp(c.timestamp, tz=timezone.utc).isoformat(),
                     "open": c.open,
                     "high": c.high,
                     "low": c.low,
@@ -44,6 +42,7 @@ class ParquetStorage:
                     "volume": c.volume,
                     "trade_count": c.trade_count,
                     "vwap": c.vwap,
+                    "spread": c.spread,
                     "buy_volume": c.buy_volume,
                     "sell_volume": c.sell_volume,
                     "outcome": getattr(c, "outcome", ""),

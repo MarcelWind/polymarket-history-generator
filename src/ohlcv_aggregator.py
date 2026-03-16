@@ -20,6 +20,7 @@ class OHLCVCandle:
     buy_volume: float
     sell_volume: float
     outcome: str
+    spread: float
 
 
 class OHLCVAggregator:
@@ -75,7 +76,7 @@ class OHLCVAggregator:
             mid = (best_bid + best_ask) / 2
             with self.lock:
                 self._last_bbo[asset_id] = (best_bid, best_ask)
-                self._update_candle(asset_id, timestamp_ms, price=mid, is_trade=False)
+                self._update_candle(asset_id, timestamp_ms, price=mid, is_trade=False, spread=spread)
 
     def _handle_price_change(self, msg: dict):
         timestamp_ms = int(msg.get("timestamp", time.time() * 1000))
@@ -88,10 +89,11 @@ class OHLCVAggregator:
 
             if best_bid > 0 and best_ask > 0:
                 mid = (best_bid + best_ask) / 2
+                spread = best_ask - best_bid
                 with self.lock:
                     self._last_bbo[asset_id] = (best_bid, best_ask)
                     self._update_candle(
-                        asset_id, timestamp_ms, price=mid, is_trade=False
+                        asset_id, timestamp_ms, price=mid, is_trade=False, spread=spread
                     )
 
     def _handle_book(self, msg: dict):
@@ -108,9 +110,10 @@ class OHLCVAggregator:
 
         if best_bid > 0 and best_ask > 0:
             mid = (best_bid + best_ask) / 2
+            spread = best_ask - best_bid
             with self.lock:
                 self._last_bbo[asset_id] = (best_bid, best_ask)
-                self._update_candle(asset_id, timestamp_ms, price=mid, is_trade=False)
+                self._update_candle(asset_id, timestamp_ms, price=mid, is_trade=False, spread=spread)
 
     def _candle_start_time(self, timestamp_ms: int) -> int:
         ts_seconds = timestamp_ms // 1000
@@ -124,6 +127,7 @@ class OHLCVAggregator:
         trade_size: float = 0.0,
         is_trade: bool = False,
         side: str = "",
+        spread: float = 0.0,
     ):
         if self.tracked_assets is not None and asset_id not in self.tracked_assets:
             return
@@ -156,6 +160,8 @@ class OHLCVAggregator:
         c["high"] = max(c["high"], price)
         c["low"] = min(c["low"], price)
         c["close"] = price
+        # record the latest spread value for this candle
+        c["spread"] = spread
 
         if is_trade and trade_size > 0:
             c["volume"] += trade_size
@@ -180,6 +186,7 @@ class OHLCVAggregator:
             "trade_count": 0,
             "vwap_numerator": 0.0,
             "outcome": outcome,
+            "spread": 0.0
         }
 
     def _finalize_candle(self, state: dict):
@@ -202,6 +209,7 @@ class OHLCVAggregator:
             buy_volume=state["buy_volume"],
             sell_volume=state["sell_volume"],
             outcome=state.get("outcome", ""),
+            spread=state["spread"],
         )
         self._completed_candles.append(candle)
         logger.debug(
