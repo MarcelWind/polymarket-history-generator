@@ -47,7 +47,26 @@ def main():
         auth=None,
         message_callback=aggregator.on_message,
         verbose=config.verbose,
+        new_market_callback=lambda msg: _on_new_market(msg, discovery, ws, aggregator, logger),
     )
+
+    def _on_new_market(msg: dict, discovery: MarketDiscovery, ws: WebSocketOrderBook,
+                       aggregator: OHLCVAggregator, logger: logging.Logger) -> None:
+        """Handle a new_market push event by immediately subscribing to the new asset."""
+        token_id = msg.get("asset_id") or msg.get("token_id")
+        if not token_id or token_id in discovery.known_assets:
+            return
+        # Trigger a full Gamma discovery pass so MarketInfo is populated properly.
+        # This runs in the WS thread; it's a short network call and is acceptable.
+        try:
+            new_markets = discovery.discover(config.market_queries)
+        except Exception:
+            logger.exception("new_market discovery failed")
+            new_markets = []
+        new_ids = [m.asset_id for m in new_markets]
+        if new_ids:
+            logger.info(f"new_market push: subscribing to {len(new_ids)} assets immediately")
+            ws.subscribe_to_tokens_ids(new_ids)
 
     shutdown_event = threading.Event()
 

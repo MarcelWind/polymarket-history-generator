@@ -10,12 +10,13 @@ USER_CHANNEL = "user"
 
 
 class WebSocketOrderBook:
-    def __init__(self, channel_type, url, data, auth, message_callback, verbose):
+    def __init__(self, channel_type, url, data, auth, message_callback, verbose, new_market_callback=None):
         self.channel_type = channel_type
         self.url = url
         self.data = list(data)  # Copy so we can append dynamically
         self.auth = auth
         self.message_callback = message_callback
+        self.new_market_callback = new_market_callback
         self.verbose = verbose
         self._stop_event = threading.Event()
         self.orderbooks = {}
@@ -40,6 +41,7 @@ class WebSocketOrderBook:
                 "tick_size_change",
                 "last_trade_price",
                 "best_bid_ask",
+                "new_market",
             }
 
             def get_event_type(d):
@@ -49,11 +51,15 @@ class WebSocketOrderBook:
                 for item in data:
                     event_type = get_event_type(item)
                     if isinstance(item, dict) and event_type in desired_events:
-                        asset_id = item.get("asset_id")
-                        if asset_id:
-                            self.orderbooks[asset_id] = item
-                        if self.message_callback:
-                            self.message_callback(item)
+                        if event_type == "new_market":
+                            if self.new_market_callback:
+                                self.new_market_callback(item)
+                        else:
+                            asset_id = item.get("asset_id")
+                            if asset_id:
+                                self.orderbooks[asset_id] = item
+                            if self.message_callback:
+                                self.message_callback(item)
                         if self.verbose:
                             logger.debug(f"Processed: {item}")
                     elif isinstance(item, dict) and self.verbose and event_type is not None:
@@ -61,11 +67,15 @@ class WebSocketOrderBook:
             elif isinstance(data, dict):
                 event_type = get_event_type(data)
                 if event_type in desired_events:
-                    asset_id = data.get("asset_id")
-                    if asset_id:
-                        self.orderbooks[asset_id] = data
-                    if self.message_callback:
-                        self.message_callback(data)
+                    if event_type == "new_market":
+                        if self.new_market_callback:
+                            self.new_market_callback(data)
+                    else:
+                        asset_id = data.get("asset_id")
+                        if asset_id:
+                            self.orderbooks[asset_id] = data
+                        if self.message_callback:
+                            self.message_callback(data)
                     if self.verbose:
                         logger.debug(f"Processed: {data}")
                 elif self.verbose and event_type is not None:
@@ -93,7 +103,7 @@ class WebSocketOrderBook:
 
     def on_open(self, ws):
         if self.channel_type == MARKET_CHANNEL:
-            ws.send(json.dumps({"assets_ids": self.data, "type": MARKET_CHANNEL}))
+            ws.send(json.dumps({"assets_ids": self.data, "type": MARKET_CHANNEL, "custom_feature_enabled": True}))
             logger.info(f"Subscribed to {len(self.data)} assets")
         elif self.channel_type == USER_CHANNEL and self.auth:
             ws.send(

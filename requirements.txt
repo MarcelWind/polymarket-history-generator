@@ -3,6 +3,7 @@ pandas
 numpy
 requests
 python-dotenv
+websocket
 websocket-client
 py-clob-client
 pyyaml
